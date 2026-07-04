@@ -1,0 +1,15 @@
+.git
+.gitignore
+node_modules
+vendor
+public/build
+public/hot
+public/storage
+storage/*.key
+storage/pail
+.env
+.env.*
+!.env.example
+docker-compose.yml
+docker/
+*.md
