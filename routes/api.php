@@ -9,5 +9,7 @@ Route::get('/user', function (Request $request) {
 })->middleware('auth:sanctum');
 
 Route::prefix('v1')->group(function () {
-    Route::apiResource('clients', ClientController::class)->only(['store', 'show']);
+    Route::apiResource('clientes', ClientController::class)
+        ->only(['store', 'show'])
+        ->parameters(['clientes' => 'client']);
 });

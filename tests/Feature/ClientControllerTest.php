@@ -9,7 +9,7 @@ test('cria um cliente com dados válidos', function () {
         'document' => '52998224725',
     ];
 
-    $response = $this->postJson('/api/v1/clients', $payload);
+    $response = $this->postJson('/api/v1/clientes', $payload);
 
     $response->assertCreated()
         ->assertJsonPath('data.name', 'Maria Silva')
@@ -23,7 +23,7 @@ test('cria um cliente com dados válidos', function () {
 });
 
 test('normaliza o documento removendo a máscara', function () {
-    $this->postJson('/api/v1/clients', [
+    $this->postJson('/api/v1/clientes', [
         'name' => 'João Souza',
         'email' => 'joao@example.com',
         'document' => '529.982.247-25',
@@ -33,13 +33,13 @@ test('normaliza o documento removendo a máscara', function () {
 });
 
 test('rejeita criação sem os campos obrigatórios', function () {
-    $this->postJson('/api/v1/clients', [])
+    $this->postJson('/api/v1/clientes', [])
         ->assertUnprocessable()
         ->assertJsonValidationErrors(['name', 'email', 'document']);
 });
 
 test('rejeita documento inválido', function () {
-    $this->postJson('/api/v1/clients', [
+    $this->postJson('/api/v1/clientes', [
         'name' => 'Ana',
         'email' => 'ana@example.com',
         'document' => '12345678900',
@@ -50,7 +50,7 @@ test('rejeita documento inválido', function () {
 test('rejeita e-mail duplicado', function () {
     Client::factory()->create(['email' => 'dup@example.com']);
 
-    $this->postJson('/api/v1/clients', [
+    $this->postJson('/api/v1/clientes', [
         'name' => 'Carlos',
         'email' => 'dup@example.com',
         'document' => '52998224725',
@@ -61,7 +61,7 @@ test('rejeita e-mail duplicado', function () {
 test('rejeita documento duplicado', function () {
     Client::factory()->create(['document' => '52998224725']);
 
-    $this->postJson('/api/v1/clients', [
+    $this->postJson('/api/v1/clientes', [
         'name' => 'Bruna',
         'email' => 'bruna@example.com',
         'document' => '529.982.247-25',
@@ -72,13 +72,13 @@ test('rejeita documento duplicado', function () {
 test('retorna um cliente existente', function () {
     $client = Client::factory()->create();
 
-    $this->getJson("/api/v1/clients/{$client->id}")
+    $this->getJson("/api/v1/clientes/{$client->id}")
         ->assertOk()
         ->assertJsonPath('data.id', $client->id)
         ->assertJsonPath('data.email', $client->email);
 });
 
 test('retorna 404 para cliente inexistente', function () {
-    $this->getJson('/api/v1/clients/999999')
+    $this->getJson('/api/v1/clientes/999999')
         ->assertNotFound();
 });
