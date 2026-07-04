@@ -8,14 +8,14 @@ use App\Models\Proposal;
 use App\Models\ProposalAudit;
 use Illuminate\Support\Facades\Schema;
 
-it('relates a client to its proposals', function () {
+test('relaciona um cliente às suas propostas', function () {
     $client = Client::factory()->has(Proposal::factory()->count(2))->create();
 
     expect($client->proposals)->toHaveCount(2)
         ->and($client->proposals->first()->client->is($client))->toBeTrue();
 });
 
-it('casts proposal attributes to the right types', function () {
+test('faz cast dos atributos da proposta para os tipos corretos', function () {
     $proposal = Proposal::factory()->create([
         'monthly_value' => 1234.5,
         'origin' => ProposalOrigin::Site,
@@ -27,14 +27,14 @@ it('casts proposal attributes to the right types', function () {
         ->and($proposal->version)->toBeInt();
 });
 
-it('applies default status and version to a new proposal', function () {
+test('aplica status e versão padrão a uma nova proposta', function () {
     $proposal = new Proposal;
 
     expect($proposal->status)->toBe(ProposalStatus::Draft)
         ->and($proposal->version)->toBe(1);
 });
 
-it('soft deletes a proposal', function () {
+test('faz exclusão lógica de uma proposta', function () {
     $proposal = Proposal::factory()->create();
 
     $proposal->delete();
@@ -43,7 +43,7 @@ it('soft deletes a proposal', function () {
     $this->assertSoftDeleted($proposal);
 });
 
-it('stores audits with json payload and without updated_at', function () {
+test('armazena auditorias com payload json e sem updated_at', function () {
     $audit = ProposalAudit::factory()->create([
         'event' => ProposalAuditEvent::Created,
         'payload' => ['field' => 'status', 'from' => 'DRAFT', 'to' => 'SUBMITTED'],
@@ -55,7 +55,7 @@ it('stores audits with json payload and without updated_at', function () {
         ->and(Schema::hasColumn('proposal_audits', 'updated_at'))->toBeFalse();
 });
 
-it('marks only approved, rejected and canceled as final states', function (ProposalStatus $status, bool $expected) {
+test('marca apenas approved, rejected e canceled como estados finais', function (ProposalStatus $status, bool $expected) {
     expect($status->isFinal())->toBe($expected);
 })->with([
     'draft' => [ProposalStatus::Draft, false],
@@ -65,7 +65,7 @@ it('marks only approved, rejected and canceled as final states', function (Propo
     'canceled' => [ProposalStatus::Canceled, true],
 ]);
 
-it('generates unique clients through the factory', function () {
+test('gera clientes únicos pela factory', function () {
     $clients = Client::factory()->count(5)->create();
 
     expect($clients->pluck('email')->unique())->toHaveCount(5)
