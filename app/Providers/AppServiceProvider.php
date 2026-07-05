@@ -39,6 +39,10 @@ class AppServiceProvider extends ServiceProvider
 
                     if (in_array($signature, $idempotentOperations, true)) {
                         $operation->addParameters([$this->idempotencyKeyParameter()]);
+                        $operation->addResponse($this->errorResponse(
+                            409,
+                            'Idempotency-Key já utilizada com um payload diferente, ou requisição com a mesma chave ainda em processamento.',
+                        ));
                     }
 
                     if (isset($businessRuleErrors[$signature])) {

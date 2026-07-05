@@ -51,6 +51,13 @@ test('documenta o conflito de versão 409 na atualização de proposta', functio
         ->toHaveKey('message');
 });
 
+test('documenta o 409 de idempotência nas rotas idempotentes', function () {
+    $paths = generatedOpenApi()['paths'];
+
+    expect($paths['/propostas']['post']['responses'] ?? [])->toHaveKey('409')
+        ->and($paths['/propostas/{proposal}/submit']['post']['responses'] ?? [])->toHaveKey('409');
+});
+
 test('documenta o 422 de transição inválida nos endpoints de workflow', function () {
     $paths = generatedOpenApi()['paths'];
 
