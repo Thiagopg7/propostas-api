@@ -1,7 +1,9 @@
 <?php
 
+use App\Enums\ProposalAuditEvent;
 use App\Models\Client;
 use App\Models\Proposal;
+use App\Models\ProposalAudit;
 use Illuminate\Support\Str;
 
 function createProposalPayload(array $overrides = []): array
@@ -150,4 +152,62 @@ test('retorna 404 ao excluir proposta já excluída logicamente', function () {
     $proposal->delete();
 
     $this->deleteJson("/api/v1/propostas/{$proposal->id}")->assertNotFound();
+});
+
+test('lista a auditoria da mais recente para a mais antiga', function () {
+    $proposal = Proposal::factory()->create();
+    $older = ProposalAudit::factory()->for($proposal)->create(['event' => ProposalAuditEvent::Created]);
+    $newer = ProposalAudit::factory()->for($proposal)->create(['event' => ProposalAuditEvent::StatusChanged]);
+
+    $this->getJson("/api/v1/propostas/{$proposal->id}/auditoria")
+        ->assertOk()
+        ->assertJsonCount(2, 'data')
+        ->assertJsonPath('data.0.id', $newer->id)
+        ->assertJsonPath('data.1.id', $older->id);
+});
+
+test('retorna a auditoria com a estrutura esperada', function () {
+    $proposal = Proposal::factory()->create();
+    ProposalAudit::factory()->for($proposal)->create([
+        'event' => ProposalAuditEvent::Created,
+        'actor' => 'user:9',
+        'payload' => ['status' => 'DRAFT'],
+    ]);
+
+    $this->getJson("/api/v1/propostas/{$proposal->id}/auditoria")
+        ->assertOk()
+        ->assertJsonStructure(['data' => [['id', 'proposal_id', 'actor', 'event', 'payload', 'created_at']]])
+        ->assertJsonPath('data.0.actor', 'user:9')
+        ->assertJsonPath('data.0.event', 'CREATED')
+        ->assertJsonPath('data.0.payload.status', 'DRAFT');
+});
+
+test('retorna lista vazia quando a proposta não tem auditoria', function () {
+    $proposal = Proposal::factory()->create();
+
+    $this->getJson("/api/v1/propostas/{$proposal->id}/auditoria")
+        ->assertOk()
+        ->assertJsonCount(0, 'data');
+});
+
+test('a auditoria acumula os eventos do ciclo de vida da proposta', function () {
+    $created = $this->postJson('/api/v1/propostas', createProposalPayload(), [
+        'Idempotency-Key' => (string) Str::uuid(),
+    ])->assertCreated();
+
+    $id = $created->json('data.id');
+
+    $this->postJson("/api/v1/propostas/{$id}/submit", [], [
+        'Idempotency-Key' => (string) Str::uuid(),
+    ])->assertOk();
+
+    $this->getJson("/api/v1/propostas/{$id}/auditoria")
+        ->assertOk()
+        ->assertJsonCount(2, 'data')
+        ->assertJsonPath('data.0.event', 'STATUS_CHANGED')
+        ->assertJsonPath('data.1.event', 'CREATED');
+});
+
+test('retorna 404 ao consultar auditoria de proposta inexistente', function () {
+    $this->getJson('/api/v1/propostas/999999/auditoria')->assertNotFound();
 });
