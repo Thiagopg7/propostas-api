@@ -11,6 +11,7 @@ use App\Services\ProposalService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Cache;
 use Symfony\Component\HttpFoundation\Response;
 
 class ProposalController extends Controller
@@ -37,9 +38,15 @@ class ProposalController extends Controller
             ->setStatusCode(Response::HTTP_CREATED);
     }
 
-    public function show(Proposal $proposal): ProposalResource
+    public function show(string $proposal): ProposalResource
     {
-        return ProposalResource::make($proposal);
+        $model = Cache::remember(
+            ProposalService::showCacheKey($proposal),
+            now()->addMinutes(5),
+            fn (): Proposal => Proposal::findOrFail($proposal),
+        );
+
+        return ProposalResource::make($model);
     }
 
     public function update(UpdateProposalRequest $request, Proposal $proposal): ProposalResource

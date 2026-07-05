@@ -189,6 +189,11 @@ test('retorna 404 para proposta inexistente', function () {
         ->assertNotFound();
 });
 
+test('retorna 404 para identificador não numérico na consulta', function () {
+    $this->getJson('/api/v1/propostas/abc')
+        ->assertNotFound();
+});
+
 test('retorna 404 para proposta excluída logicamente', function () {
     $proposal = Proposal::factory()->create();
     $proposal->delete();

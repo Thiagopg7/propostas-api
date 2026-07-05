@@ -18,6 +18,7 @@ A API é versionada sob o prefixo **`/api/v1`**.
 - [Entidades](#entidades)
 - [Endpoints](#endpoints)
 - [Regras de negócio](#regras-de-negócio)
+- [Desempenho e limites](#desempenho-e-limites)
 - [Exemplos de uso](#exemplos-de-uso)
 - [Padrão de erros](#padrão-de-erros)
 - [Arquitetura](#arquitetura)
@@ -26,20 +27,20 @@ A API é versionada sob o prefixo **`/api/v1`**.
 
 - **PHP** 8.3+ (a imagem Docker usa 8.5)
 - **Laravel** 13 · **Sanctum** 4
-- **MySQL** 8.4 · **Redis** 7 (cache e filas)
+- **MySQL** 8.4 (banco, cache e rate limit)
 - **Pest** 4 (testes) · **Pint** (formatação)
 
 ## Requisitos
 
 - Docker e Docker Compose **ou** PHP 8.3+, Composer, Node 20+ e MySQL 8.
-- As portas expostas no host pelo Docker são **8000** (app), **3307** (MySQL) e **6380** (Redis),
-  escolhidas para não colidir com serviços locais em 3306/6379.
+- As portas expostas no host pelo Docker são **8000** (app) e **3307** (MySQL),
+  escolhidas para não colidir com serviços locais em 3306.
 
 ## Como rodar
 
 ### Docker (recomendado)
 
-O `.env.example` já vem configurado para o ambiente Docker (`DB_HOST=mysql`, `REDIS_HOST=redis`).
+O `.env.example` já vem configurado para o ambiente Docker (`DB_HOST=mysql`).
 
 ```bash
 cp .env.example .env
@@ -63,8 +64,7 @@ docker compose exec -e HOME=/tmp app php artisan tinker
 ### Local
 
 Requer MySQL rodando e um banco `propostas_api` acessível. Ajuste o `.env` para o seu
-ambiente (por exemplo `DB_HOST=127.0.0.1`, `DB_PORT=3306`, e `CACHE_STORE=database` /
-`QUEUE_CONNECTION=database` caso não use Redis).
+ambiente (por exemplo `DB_HOST=127.0.0.1`, `DB_PORT=3306`).
 
 ```bash
 composer setup      # install + .env + key:generate + migrate + npm build
@@ -218,6 +218,20 @@ Toda operação que altera o estado gera um registro de auditoria:
 O `DELETE` realiza *soft delete* (preenche `deleted_at`), registra a auditoria e responde
 **204 No Content**. Propostas excluídas não aparecem na listagem nem podem ser consultadas
 por id (retornam 404).
+
+## Desempenho e limites
+
+### Cache
+
+O `GET /propostas/{id}` é servido de cache (store de banco, TTL de 5 minutos) e
+**invalidado automaticamente** a cada escrita na proposta — atualização, mudança de status
+ou exclusão lógica —, de modo que a leitura nunca fica defasada.
+
+### Rate limit
+
+Todos os endpoints de `/api/v1` são limitados a **60 requisições por minuto por IP**. Ao
+exceder, a API responde **429 Too Many Requests** com os cabeçalhos `X-RateLimit-Limit`,
+`X-RateLimit-Remaining` e `Retry-After`.
 
 ## Exemplos de uso
 

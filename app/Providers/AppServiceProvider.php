@@ -10,12 +10,18 @@ use Dedoc\Scramble\Support\Generator\Response;
 use Dedoc\Scramble\Support\Generator\Schema;
 use Dedoc\Scramble\Support\Generator\Types\ObjectType;
 use Dedoc\Scramble\Support\Generator\Types\StringType;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 
 class AppServiceProvider extends ServiceProvider
 {
+    private const API_RATE_LIMIT = 60;
+
     /**
      * Register any application services.
      */
@@ -29,6 +35,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        RateLimiter::for('api', fn (Request $request) => Limit::perMinute(self::API_RATE_LIMIT)
+            ->by($request->ip())
+            ->response(fn (Request $request, array $headers) => new JsonResponse(
+                ['message' => 'Muitas requisições. Aguarde um instante e tente novamente.'],
+                JsonResponse::HTTP_TOO_MANY_REQUESTS,
+                $headers,
+            )));
+
         Scramble::afterOpenApiGenerated(function (OpenApi $openApi): void {
             $idempotentOperations = $this->idempotentOperations();
             $businessRuleErrors = $this->businessRuleErrorResponses();
@@ -36,6 +50,11 @@ class AppServiceProvider extends ServiceProvider
             foreach ($openApi->paths as $path) {
                 foreach ($path->operations as $operation) {
                     $signature = strtoupper($operation->method).' '.$path->path;
+
+                    $operation->addResponse($this->errorResponse(
+                        429,
+                        'Limite de requisições excedido. Tente novamente em instantes.',
+                    ));
 
                     if (in_array($signature, $idempotentOperations, true)) {
                         $operation->addParameters([$this->idempotencyKeyParameter()]);
@@ -89,8 +108,8 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Business-rule error responses thrown inside the service layer, which Scramble
-     * cannot infer from the controller signature.
+     * Error responses that Scramble cannot infer from the controller signature
+     * (thrown inside the service layer or resolved via cached lookups).
      *
      * @return array<string, array{int, string}>
      */
@@ -98,8 +117,10 @@ class AppServiceProvider extends ServiceProvider
     {
         $conflict = [409, 'Conflito de versão (optimistic lock): a proposta foi modificada por outra requisição.'];
         $invalidTransition = [422, 'Transição de status não permitida para o estado atual da proposta.'];
+        $notFound = [404, 'Proposta não encontrada.'];
 
         $actionResponses = [
+            'show' => $notFound,
             'update' => $conflict,
             'submit' => $invalidTransition,
             'approve' => $invalidTransition,

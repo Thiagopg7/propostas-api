@@ -8,11 +8,17 @@ use App\Exceptions\ProposalStateException;
 use App\Exceptions\StaleProposalVersionException;
 use App\Models\Proposal;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class ProposalService
 {
     public function __construct(private readonly ProposalAuditService $audit) {}
+
+    public static function showCacheKey(int|string $id): string
+    {
+        return "proposals.show.{$id}";
+    }
 
     /**
      * @param  array<string, mixed>  $attributes
@@ -58,7 +64,7 @@ class ProposalService
             throw ProposalStateException::notEditable();
         }
 
-        return DB::transaction(function () use ($proposal, $fields, $expectedVersion) {
+        $updated = DB::transaction(function () use ($proposal, $fields, $expectedVersion) {
             $original = $proposal->only(array_keys($fields));
 
             $affected = Proposal::query()
@@ -87,6 +93,10 @@ class ProposalService
 
             return $proposal;
         });
+
+        Cache::forget(self::showCacheKey($updated->getKey()));
+
+        return $updated;
     }
 
     public function submit(Proposal $proposal): Proposal
@@ -118,6 +128,8 @@ class ProposalService
                 'status' => $proposal->status->value,
             ]);
         });
+
+        Cache::forget(self::showCacheKey($proposal->getKey()));
     }
 
     private function transition(Proposal $proposal, ProposalStatus $target): Proposal
@@ -126,7 +138,7 @@ class ProposalService
             throw ProposalStateException::cannotTransition($proposal->status, $target);
         }
 
-        return DB::transaction(function () use ($proposal, $target) {
+        $updated = DB::transaction(function () use ($proposal, $target) {
             $from = $proposal->status;
 
             $affected = Proposal::query()
@@ -151,6 +163,10 @@ class ProposalService
 
             return $proposal;
         });
+
+        Cache::forget(self::showCacheKey($updated->getKey()));
+
+        return $updated;
     }
 
     /**
