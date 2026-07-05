@@ -14,6 +14,7 @@ A API é versionada sob o prefixo **`/api/v1`**.
   - [Docker (recomendado)](#docker-recomendado)
   - [Local](#local)
 - [Testes](#testes)
+- [Documentação da API (OpenAPI)](#documentação-da-api-openapi)
 - [Entidades](#entidades)
 - [Endpoints](#endpoints)
 - [Regras de negócio](#regras-de-negócio)
@@ -79,6 +80,28 @@ php artisan test --compact    # saída resumida
 php artisan test --filter=busca
 
 vendor/bin/pint               # formatação
+```
+
+## Documentação da API (OpenAPI)
+
+A documentação é gerada automaticamente com [Scramble](https://scramble.dedoc.co/) a partir
+dos Form Requests, Resources e enums — sem anotações no código. Com o projeto rodando:
+
+| Recurso | URL |
+|---|---|
+| UI interativa (Stoplight Elements) | `http://localhost:8000/docs/api` |
+| Especificação OpenAPI 3.1 (JSON) | `http://localhost:8000/docs/api.json` |
+
+A UI permite testar os endpoints direto do navegador (**Try It**), disparando requisições
+reais contra a API. Nas rotas idempotentes (`POST /propostas` e `submit`), o header
+**`Idempotency-Key`** é documentado como obrigatório.
+
+Por segurança, a documentação só é acessível em ambiente `local`; em produção o middleware
+`RestrictedDocsAccess` a bloqueia por padrão. A especificação pode ser exportada para um
+arquivo com:
+
+```bash
+docker compose exec app php artisan scramble:export
 ```
 
 ## Entidades
