@@ -74,4 +74,11 @@ class ProposalController extends Controller
     {
         return ProposalResource::make($this->proposals->cancel($proposal));
     }
+
+    public function destroy(Proposal $proposal): Response
+    {
+        $this->proposals->delete($proposal);
+
+        return response()->noContent();
+    }
 }
