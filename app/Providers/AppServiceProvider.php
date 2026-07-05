@@ -45,6 +45,7 @@ class AppServiceProvider extends ServiceProvider
 
         Scramble::afterOpenApiGenerated(function (OpenApi $openApi): void {
             $idempotentOperations = $this->idempotentOperations();
+            $auditOperations = $this->auditOperations();
             $businessRuleErrors = $this->businessRuleErrorResponses();
 
             foreach ($openApi->paths as $path) {
@@ -55,6 +56,10 @@ class AppServiceProvider extends ServiceProvider
                         429,
                         'Limite de requisições excedido. Tente novamente em instantes.',
                     ));
+
+                    if (in_array($signature, $auditOperations, true)) {
+                        $operation->addParameters([$this->actorParameter()]);
+                    }
 
                     if (in_array($signature, $idempotentOperations, true)) {
                         $operation->addParameters([$this->idempotencyKeyParameter()]);
@@ -104,6 +109,46 @@ class AppServiceProvider extends ServiceProvider
         return Parameter::make('Idempotency-Key', 'header')
             ->required(true)
             ->description('Chave única (UUID) que garante a idempotência da operação. Repetir a mesma chave devolve a resposta original, sem duplicar registros.')
+            ->setSchema(Schema::fromType(new StringType));
+    }
+
+    /**
+     * Operations (method + documented path) that record an audit entry.
+     *
+     * @return list<string>
+     */
+    private function auditOperations(): array
+    {
+        $auditActions = ['store', 'update', 'submit', 'approve', 'reject', 'cancel', 'destroy'];
+
+        $operations = [];
+
+        foreach (Route::getRoutes() as $route) {
+            if (ltrim((string) $route->getControllerClass(), '\\') !== ProposalController::class) {
+                continue;
+            }
+
+            if (! in_array($route->getActionMethod(), $auditActions, true)) {
+                continue;
+            }
+
+            $path = ltrim(Str::after($route->uri(), 'api/v1'), '/');
+
+            foreach ($route->methods() as $method) {
+                if ($method !== 'HEAD') {
+                    $operations[] = $method.' '.$path;
+                }
+            }
+        }
+
+        return $operations;
+    }
+
+    private function actorParameter(): Parameter
+    {
+        return Parameter::make('X-Actor', 'header')
+            ->required(false)
+            ->description('Identificador do autor da ação, registrado na auditoria (ex.: user:123). Se omitido, a auditoria registra "system".')
             ->setSchema(Schema::fromType(new StringType));
     }
 
