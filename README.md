@@ -232,6 +232,20 @@ Toda operação que altera o estado gera um registro de auditoria:
 | submit/approve/reject/cancel | `STATUS_CHANGED` | `{ from, to }` |
 | Exclusão lógica | `DELETED_LOGICAL` | metadados da exclusão |
 
+#### Autor da ação (`X-Actor`)
+
+O campo `actor` de cada registro é preenchido pelo cabeçalho **`X-Actor`** da requisição
+(ex.: `user:123`). Quando o cabeçalho é omitido, a auditoria registra **`system`**. O header
+é opcional e aceito nas rotas que geram auditoria (criação, `PATCH`, transições de status e
+exclusão lógica); na UI OpenAPI ele aparece como campo testável nessas operações.
+
+```bash
+curl -X POST http://localhost:8000/api/v1/propostas/1/submit \
+  -H "Accept: application/json" \
+  -H "Idempotency-Key: 660e8400-e29b-41d4-a716-446655440111" \
+  -H "X-Actor: user:123"
+```
+
 ### Exclusão lógica
 
 O `DELETE` realiza *soft delete* (preenche `deleted_at`), registra a auditoria e responde
