@@ -63,12 +63,31 @@ docker compose exec -e HOME=/tmp app php artisan tinker
 
 ### Local
 
-Requer MySQL rodando e um banco `propostas_api` acessível. Ajuste o `.env` para o seu
-ambiente (por exemplo `DB_HOST=127.0.0.1`, `DB_PORT=3306`).
+Requer MySQL rodando e um banco `propostas_api` acessível.
 
 ```bash
-composer setup      # install + .env + key:generate + migrate + npm build
+composer install
+cp .env.example .env
+```
+
+Ajuste o `.env` para o seu ambiente antes de migrar (o `.env.example` aponta para o host
+`mysql` do Docker):
+
+```env
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=propostas_api
+DB_USERNAME=seu_usuario
+DB_PASSWORD=sua_senha
+```
+
+Com o `.env` ajustado:
+
+```bash
+php artisan key:generate
 php artisan migrate --seed
+npm install && npm run build
+
 composer run dev    # server + queue + logs (pail) + vite
 ```
 
