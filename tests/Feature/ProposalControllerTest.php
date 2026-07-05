@@ -2,6 +2,7 @@
 
 use App\Models\Client;
 use App\Models\Proposal;
+use Illuminate\Support\Str;
 
 function validProposalPayload(array $overrides = []): array
 {
@@ -13,8 +14,13 @@ function validProposalPayload(array $overrides = []): array
     ], $overrides);
 }
 
+function idempotencyHeader(?string $key = null): array
+{
+    return ['Idempotency-Key' => $key ?? (string) Str::uuid()];
+}
+
 test('cria uma proposta com dados válidos', function () {
-    $response = $this->postJson('/api/v1/propostas', validProposalPayload());
+    $response = $this->postJson('/api/v1/propostas', validProposalPayload(), idempotencyHeader());
 
     $response->assertCreated()
         ->assertJsonPath('data.product', 'Plano Ouro')
@@ -32,7 +38,7 @@ test('ignora status e version enviados no corpo', function () {
     $response = $this->postJson('/api/v1/propostas', validProposalPayload([
         'status' => 'APPROVED',
         'version' => 99,
-    ]));
+    ]), idempotencyHeader());
 
     $response->assertCreated()
         ->assertJsonPath('data.status', 'DRAFT')
@@ -45,22 +51,74 @@ test('ignora status e version enviados no corpo', function () {
     ]);
 });
 
+test('exige o cabeçalho Idempotency-Key na criação', function () {
+    $this->postJson('/api/v1/propostas', validProposalPayload())
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['idempotency_key']);
+
+    $this->assertDatabaseCount('proposals', 0);
+});
+
 test('rejeita cliente inexistente', function () {
-    $this->postJson('/api/v1/propostas', validProposalPayload(['client_id' => 999999]))
+    $this->postJson('/api/v1/propostas', validProposalPayload(['client_id' => 999999]), idempotencyHeader())
         ->assertUnprocessable()
         ->assertJsonValidationErrors(['client_id']);
 });
 
 test('rejeita origem inválida', function () {
-    $this->postJson('/api/v1/propostas', validProposalPayload(['origin' => 'EMAIL']))
+    $this->postJson('/api/v1/propostas', validProposalPayload(['origin' => 'EMAIL']), idempotencyHeader())
         ->assertUnprocessable()
         ->assertJsonValidationErrors(['origin']);
 });
 
 test('rejeita valor mensal não positivo', function () {
-    $this->postJson('/api/v1/propostas', validProposalPayload(['monthly_value' => 0]))
+    $this->postJson('/api/v1/propostas', validProposalPayload(['monthly_value' => 0]), idempotencyHeader())
         ->assertUnprocessable()
         ->assertJsonValidationErrors(['monthly_value']);
+});
+
+test('reaproveita a resposta ao repetir a mesma Idempotency-Key', function () {
+    $payload = validProposalPayload();
+    $headers = idempotencyHeader('chave-abc-123');
+
+    $first = $this->postJson('/api/v1/propostas', $payload, $headers)->assertCreated();
+    $second = $this->postJson('/api/v1/propostas', $payload, $headers)->assertCreated();
+
+    expect($second->json('data.id'))->toBe($first->json('data.id'));
+    $this->assertDatabaseCount('proposals', 1);
+});
+
+test('cria propostas distintas para Idempotency-Keys diferentes', function () {
+    $payload = validProposalPayload();
+
+    $this->postJson('/api/v1/propostas', $payload, idempotencyHeader('chave-1'))->assertCreated();
+    $this->postJson('/api/v1/propostas', $payload, idempotencyHeader('chave-2'))->assertCreated();
+
+    $this->assertDatabaseCount('proposals', 2);
+});
+
+test('rejeita a mesma Idempotency-Key com payload diferente', function () {
+    $headers = idempotencyHeader('chave-conflito');
+
+    $this->postJson('/api/v1/propostas', validProposalPayload(['product' => 'Plano Ouro']), $headers)
+        ->assertCreated();
+
+    $this->postJson('/api/v1/propostas', validProposalPayload(['product' => 'Plano Prata']), $headers)
+        ->assertStatus(409);
+
+    $this->assertDatabaseCount('proposals', 1);
+});
+
+test('não persiste a Idempotency-Key quando a validação falha', function () {
+    $headers = idempotencyHeader('chave-invalida');
+
+    $this->postJson('/api/v1/propostas', validProposalPayload(['monthly_value' => 0]), $headers)
+        ->assertUnprocessable();
+
+    $this->postJson('/api/v1/propostas', validProposalPayload(), $headers)
+        ->assertCreated();
+
+    $this->assertDatabaseCount('proposals', 1);
 });
 
 test('retorna uma proposta existente', function () {
