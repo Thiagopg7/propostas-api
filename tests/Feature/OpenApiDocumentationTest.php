@@ -102,3 +102,25 @@ test('não exige Idempotency-Key em rotas não idempotentes', function () {
 
     expect(headerParameterNames($parameters))->not->toContain('Idempotency-Key');
 });
+
+test('documenta o cabeçalho X-Actor nas rotas que geram auditoria', function () {
+    $paths = generatedOpenApi()['paths'];
+
+    expect(headerParameterNames($paths['/propostas']['post']['parameters'] ?? []))
+        ->toContain('X-Actor')
+        ->and(headerParameterNames($paths['/propostas/{proposal}']['patch']['parameters'] ?? []))
+        ->toContain('X-Actor')
+        ->and(headerParameterNames($paths['/propostas/{proposal}/submit']['post']['parameters'] ?? []))
+        ->toContain('X-Actor')
+        ->and(headerParameterNames($paths['/propostas/{proposal}']['delete']['parameters'] ?? []))
+        ->toContain('X-Actor');
+});
+
+test('não documenta X-Actor em rotas somente de leitura', function () {
+    $paths = generatedOpenApi()['paths'];
+
+    expect(headerParameterNames($paths['/propostas']['get']['parameters'] ?? []))
+        ->not->toContain('X-Actor')
+        ->and(headerParameterNames($paths['/propostas/{proposal}']['get']['parameters'] ?? []))
+        ->not->toContain('X-Actor');
+});
