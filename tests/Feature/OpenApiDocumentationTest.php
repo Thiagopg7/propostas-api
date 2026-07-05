@@ -36,6 +36,13 @@ test('gera a documentação OpenAPI com os dados da API', function () {
         ]);
 });
 
+test('documenta a atualização de proposta como PATCH', function () {
+    $operations = generatedOpenApi()['paths']['/propostas/{proposal}'] ?? [];
+
+    expect($operations)->toHaveKey('patch')
+        ->and($operations)->not->toHaveKey('put');
+});
+
 test('documenta os parâmetros de busca em GET propostas', function () {
     $parameters = generatedOpenApi()['paths']['/propostas']['get']['parameters'] ?? [];
 

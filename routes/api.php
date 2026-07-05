@@ -27,8 +27,11 @@ Route::prefix('v1')->group(function () {
     Route::get('propostas/{proposal}/auditoria', [ProposalAuditController::class, 'index'])
         ->name('propostas.auditoria');
 
+    Route::patch('propostas/{proposal}', [ProposalController::class, 'update'])
+        ->name('propostas.update');
+
     Route::apiResource('propostas', ProposalController::class)
-        ->only(['index', 'store', 'show', 'update', 'destroy'])
+        ->only(['index', 'store', 'show', 'destroy'])
         ->parameters(['propostas' => 'proposal'])
         ->middlewareFor('store', 'idempotency');
 });

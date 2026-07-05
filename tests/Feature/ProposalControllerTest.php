@@ -197,6 +197,15 @@ test('retorna 404 para proposta excluída logicamente', function () {
         ->assertNotFound();
 });
 
+test('não aceita PUT na atualização de proposta', function () {
+    $proposal = Proposal::factory()->create(['version' => 1]);
+
+    $this->putJson("/api/v1/propostas/{$proposal->id}", [
+        'version' => 1,
+        'product' => 'Via PUT',
+    ])->assertStatus(405);
+});
+
 test('atualiza campos de uma proposta em rascunho e incrementa a versão', function () {
     $proposal = Proposal::factory()->create(['product' => 'Antigo', 'version' => 1]);
 
