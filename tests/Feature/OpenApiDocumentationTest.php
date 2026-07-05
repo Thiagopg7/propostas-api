@@ -43,6 +43,23 @@ test('documenta a atualização de proposta como PATCH', function () {
         ->and($operations)->not->toHaveKey('put');
 });
 
+test('documenta o conflito de versão 409 na atualização de proposta', function () {
+    $responses = generatedOpenApi()['paths']['/propostas/{proposal}']['patch']['responses'] ?? [];
+
+    expect($responses)->toHaveKey('409')
+        ->and($responses['409']['content']['application/json']['schema']['properties'])
+        ->toHaveKey('message');
+});
+
+test('documenta o 422 de transição inválida nos endpoints de workflow', function () {
+    $paths = generatedOpenApi()['paths'];
+
+    foreach (['submit', 'approve', 'reject', 'cancel'] as $action) {
+        expect($paths["/propostas/{proposal}/{$action}"]['post']['responses'] ?? [])
+            ->toHaveKey('422');
+    }
+});
+
 test('documenta os parâmetros de busca em GET propostas', function () {
     $parameters = generatedOpenApi()['paths']['/propostas']['get']['parameters'] ?? [];
 
