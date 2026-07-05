@@ -28,10 +28,23 @@ class ProposalService
         });
     }
 
-    public function paginate(int $perPage): LengthAwarePaginator
+    /**
+     * @param  array<string, mixed>  $filters
+     */
+    public function search(array $filters, int $perPage): LengthAwarePaginator
     {
+        $sortColumn = $filters['sort'] ?? 'id';
+        $sortDirection = $filters['order'] ?? 'desc';
+
         return Proposal::query()
-            ->latest('id')
+            ->when(isset($filters['status']), fn ($query) => $query->where('status', $filters['status']))
+            ->when(isset($filters['origin']), fn ($query) => $query->where('origin', $filters['origin']))
+            ->when(isset($filters['client_id']), fn ($query) => $query->where('client_id', $filters['client_id']))
+            ->when(filled($filters['product'] ?? null), fn ($query) => $query->where('product', 'like', '%'.$filters['product'].'%'))
+            ->when(isset($filters['min_value']), fn ($query) => $query->where('monthly_value', '>=', $filters['min_value']))
+            ->when(isset($filters['max_value']), fn ($query) => $query->where('monthly_value', '<=', $filters['max_value']))
+            ->orderBy($sortColumn, $sortDirection)
+            ->when($sortColumn !== 'id', fn ($query) => $query->orderBy('id', 'desc'))
             ->paginate($perPage)
             ->withQueryString();
     }

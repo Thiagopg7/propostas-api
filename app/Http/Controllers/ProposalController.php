@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\SearchProposalRequest;
 use App\Http\Requests\StoreProposalRequest;
 use App\Http\Requests\UpdateProposalRequest;
 use App\Http\Resources\ProposalResource;
 use App\Models\Proposal;
 use App\Services\ProposalService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Arr;
 use Symfony\Component\HttpFoundation\Response;
@@ -21,11 +21,11 @@ class ProposalController extends Controller
 
     public function __construct(private readonly ProposalService $proposals) {}
 
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(SearchProposalRequest $request): AnonymousResourceCollection
     {
         $perPage = max(1, min($request->integer('per_page', self::DEFAULT_PER_PAGE), self::MAX_PER_PAGE));
 
-        return ProposalResource::collection($this->proposals->paginate($perPage));
+        return ProposalResource::collection($this->proposals->search($request->validated(), $perPage));
     }
 
     public function store(StoreProposalRequest $request): JsonResponse
