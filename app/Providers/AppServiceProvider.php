@@ -89,8 +89,8 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Business-rule error responses thrown inside the service layer, which Scramble
-     * cannot infer from the controller signature.
+     * Error responses that Scramble cannot infer from the controller signature
+     * (thrown inside the service layer or resolved via cached lookups).
      *
      * @return array<string, array{int, string}>
      */
@@ -98,8 +98,10 @@ class AppServiceProvider extends ServiceProvider
     {
         $conflict = [409, 'Conflito de versão (optimistic lock): a proposta foi modificada por outra requisição.'];
         $invalidTransition = [422, 'Transição de status não permitida para o estado atual da proposta.'];
+        $notFound = [404, 'Proposta não encontrada.'];
 
         $actionResponses = [
+            'show' => $notFound,
             'update' => $conflict,
             'submit' => $invalidTransition,
             'approve' => $invalidTransition,

@@ -51,6 +51,12 @@ test('documenta o conflito de versão 409 na atualização de proposta', functio
         ->toHaveKey('message');
 });
 
+test('documenta o 404 na consulta de proposta inexistente', function () {
+    $responses = generatedOpenApi()['paths']['/propostas/{proposal}']['get']['responses'] ?? [];
+
+    expect($responses)->toHaveKey('404');
+});
+
 test('documenta o 409 de idempotência nas rotas idempotentes', function () {
     $paths = generatedOpenApi()['paths'];
 
