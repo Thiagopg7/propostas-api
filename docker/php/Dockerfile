@@ -10,11 +10,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libzip-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Extensões PHP necessárias para Laravel + MySQL + Redis
+# Extensões PHP necessárias para Laravel + MySQL
 COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/bin/
 RUN install-php-extensions \
         pdo_mysql \
-        redis \
         zip \
         bcmath \
         intl \

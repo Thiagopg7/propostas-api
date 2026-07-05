@@ -26,20 +26,20 @@ A API é versionada sob o prefixo **`/api/v1`**.
 
 - **PHP** 8.3+ (a imagem Docker usa 8.5)
 - **Laravel** 13 · **Sanctum** 4
-- **MySQL** 8.4 · **Redis** 7 (cache e filas)
+- **MySQL** 8.4 (banco, cache e rate limit)
 - **Pest** 4 (testes) · **Pint** (formatação)
 
 ## Requisitos
 
 - Docker e Docker Compose **ou** PHP 8.3+, Composer, Node 20+ e MySQL 8.
-- As portas expostas no host pelo Docker são **8000** (app), **3307** (MySQL) e **6380** (Redis),
-  escolhidas para não colidir com serviços locais em 3306/6379.
+- As portas expostas no host pelo Docker são **8000** (app) e **3307** (MySQL),
+  escolhidas para não colidir com serviços locais em 3306.
 
 ## Como rodar
 
 ### Docker (recomendado)
 
-O `.env.example` já vem configurado para o ambiente Docker (`DB_HOST=mysql`, `REDIS_HOST=redis`).
+O `.env.example` já vem configurado para o ambiente Docker (`DB_HOST=mysql`).
 
 ```bash
 cp .env.example .env
@@ -63,8 +63,7 @@ docker compose exec -e HOME=/tmp app php artisan tinker
 ### Local
 
 Requer MySQL rodando e um banco `propostas_api` acessível. Ajuste o `.env` para o seu
-ambiente (por exemplo `DB_HOST=127.0.0.1`, `DB_PORT=3306`, e `CACHE_STORE=database` /
-`QUEUE_CONNECTION=database` caso não use Redis).
+ambiente (por exemplo `DB_HOST=127.0.0.1`, `DB_PORT=3306`).
 
 ```bash
 composer setup      # install + .env + key:generate + migrate + npm build
