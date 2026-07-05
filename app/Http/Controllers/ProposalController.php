@@ -54,4 +54,24 @@ class ProposalController extends Controller
 
         return ProposalResource::make($proposal);
     }
+
+    public function submit(Proposal $proposal): ProposalResource
+    {
+        return ProposalResource::make($this->proposals->submit($proposal));
+    }
+
+    public function approve(Proposal $proposal): ProposalResource
+    {
+        return ProposalResource::make($this->proposals->approve($proposal));
+    }
+
+    public function reject(Proposal $proposal): ProposalResource
+    {
+        return ProposalResource::make($this->proposals->reject($proposal));
+    }
+
+    public function cancel(Proposal $proposal): ProposalResource
+    {
+        return ProposalResource::make($this->proposals->cancel($proposal));
+    }
 }

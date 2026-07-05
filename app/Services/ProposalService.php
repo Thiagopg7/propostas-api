@@ -58,4 +58,46 @@ class ProposalService
 
         return $proposal->refresh();
     }
+
+    public function submit(Proposal $proposal): Proposal
+    {
+        return $this->transition($proposal, ProposalStatus::Submitted);
+    }
+
+    public function approve(Proposal $proposal): Proposal
+    {
+        return $this->transition($proposal, ProposalStatus::Approved);
+    }
+
+    public function reject(Proposal $proposal): Proposal
+    {
+        return $this->transition($proposal, ProposalStatus::Rejected);
+    }
+
+    public function cancel(Proposal $proposal): Proposal
+    {
+        return $this->transition($proposal, ProposalStatus::Canceled);
+    }
+
+    private function transition(Proposal $proposal, ProposalStatus $target): Proposal
+    {
+        if (! $proposal->status->canTransitionTo($target)) {
+            throw ProposalStateException::cannotTransition($proposal->status, $target);
+        }
+
+        $affected = Proposal::query()
+            ->whereKey($proposal->getKey())
+            ->where('status', $proposal->status->value)
+            ->update([
+                'status' => $target->value,
+                'version' => DB::raw('version + 1'),
+                'updated_at' => now(),
+            ]);
+
+        if ($affected === 0) {
+            throw ProposalStateException::cannotTransition($proposal->refresh()->status, $target);
+        }
+
+        return $proposal->refresh();
+    }
 }
