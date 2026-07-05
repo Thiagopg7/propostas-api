@@ -18,6 +18,7 @@ A API é versionada sob o prefixo **`/api/v1`**.
 - [Entidades](#entidades)
 - [Endpoints](#endpoints)
 - [Regras de negócio](#regras-de-negócio)
+- [Desempenho e limites](#desempenho-e-limites)
 - [Exemplos de uso](#exemplos-de-uso)
 - [Padrão de erros](#padrão-de-erros)
 - [Arquitetura](#arquitetura)
@@ -217,6 +218,20 @@ Toda operação que altera o estado gera um registro de auditoria:
 O `DELETE` realiza *soft delete* (preenche `deleted_at`), registra a auditoria e responde
 **204 No Content**. Propostas excluídas não aparecem na listagem nem podem ser consultadas
 por id (retornam 404).
+
+## Desempenho e limites
+
+### Cache
+
+O `GET /propostas/{id}` é servido de cache (store de banco, TTL de 5 minutos) e
+**invalidado automaticamente** a cada escrita na proposta — atualização, mudança de status
+ou exclusão lógica —, de modo que a leitura nunca fica defasada.
+
+### Rate limit
+
+Todos os endpoints de `/api/v1` são limitados a **60 requisições por minuto por IP**. Ao
+exceder, a API responde **429 Too Many Requests** com os cabeçalhos `X-RateLimit-Limit`,
+`X-RateLimit-Remaining` e `Retry-After`.
 
 ## Exemplos de uso
 

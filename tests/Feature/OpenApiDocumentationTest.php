@@ -51,6 +51,13 @@ test('documenta o conflito de versão 409 na atualização de proposta', functio
         ->toHaveKey('message');
 });
 
+test('documenta o 429 de rate limit nos endpoints da API', function () {
+    $paths = generatedOpenApi()['paths'];
+
+    expect($paths['/propostas']['get']['responses'] ?? [])->toHaveKey('429')
+        ->and($paths['/clientes']['post']['responses'] ?? [])->toHaveKey('429');
+});
+
 test('documenta o 404 na consulta de proposta inexistente', function () {
     $responses = generatedOpenApi()['paths']['/propostas/{proposal}']['get']['responses'] ?? [];
 
