@@ -48,7 +48,7 @@ class UpdateProposalRequest extends FormRequest
             'string' => 'O campo :attribute deve ser um texto.',
             'product.max' => 'O campo :attribute não pode ter mais de :max caracteres.',
             'monthly_value.max' => 'O campo :attribute não pode ser maior que :max.',
-            'origin.enum' => 'O :attribute selecionado é inválido.',
+            'origin.enum' => 'A :attribute selecionada é inválida.',
         ];
     }
 

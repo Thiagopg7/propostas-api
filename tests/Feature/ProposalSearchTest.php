@@ -112,7 +112,7 @@ test('rejeita status inválido no filtro', function () {
 test('rejeita origem inválida no filtro', function () {
     $this->getJson('/api/v1/propostas?origin=INVALIDO')
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['origin' => 'O origem selecionado é inválido.']);
+        ->assertJsonValidationErrors(['origin' => 'A origem selecionada é inválida.']);
 });
 
 test('aplica filtros com ordenação e paginação em conjunto', function () {

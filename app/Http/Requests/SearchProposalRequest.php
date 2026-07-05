@@ -52,7 +52,7 @@ class SearchProposalRequest extends FormRequest
             'max' => 'O campo :attribute deve ter no máximo :max caracteres.',
             'exists' => 'O :attribute informado não existe.',
             'status.enum' => 'O :attribute selecionado é inválido.',
-            'origin.enum' => 'O :attribute selecionado é inválido.',
+            'origin.enum' => 'A :attribute selecionada é inválida.',
             'sort.in' => 'O campo :attribute deve ser uma das colunas permitidas.',
             'order.in' => 'O campo :attribute deve ser asc ou desc.',
         ];
