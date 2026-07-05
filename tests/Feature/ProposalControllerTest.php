@@ -121,6 +121,60 @@ test('não persiste a Idempotency-Key quando a validação falha', function () {
     $this->assertDatabaseCount('proposals', 1);
 });
 
+test('lista propostas paginadas com metadados', function () {
+    Proposal::factory()->count(3)->create();
+
+    $this->getJson('/api/v1/propostas')
+        ->assertOk()
+        ->assertJsonCount(3, 'data')
+        ->assertJsonPath('meta.total', 3)
+        ->assertJsonPath('meta.per_page', 15)
+        ->assertJsonPath('meta.current_page', 1);
+});
+
+test('respeita o parâmetro per_page e navega entre páginas', function () {
+    Proposal::factory()->count(5)->create();
+
+    $this->getJson('/api/v1/propostas?per_page=2')
+        ->assertOk()
+        ->assertJsonCount(2, 'data')
+        ->assertJsonPath('meta.per_page', 2)
+        ->assertJsonPath('meta.last_page', 3);
+
+    $this->getJson('/api/v1/propostas?per_page=2&page=3')
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('meta.current_page', 3);
+});
+
+test('limita o per_page ao máximo permitido', function () {
+    Proposal::factory()->count(2)->create();
+
+    $this->getJson('/api/v1/propostas?per_page=999')
+        ->assertOk()
+        ->assertJsonPath('meta.per_page', 100);
+});
+
+test('ordena as propostas da mais recente para a mais antiga', function () {
+    $older = Proposal::factory()->create();
+    $newer = Proposal::factory()->create();
+
+    $this->getJson('/api/v1/propostas')
+        ->assertOk()
+        ->assertJsonPath('data.0.id', $newer->id)
+        ->assertJsonPath('data.1.id', $older->id);
+});
+
+test('não lista propostas excluídas logicamente', function () {
+    $visible = Proposal::factory()->create();
+    Proposal::factory()->create()->delete();
+
+    $this->getJson('/api/v1/propostas')
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.id', $visible->id);
+});
+
 test('retorna uma proposta existente', function () {
     $proposal = Proposal::factory()->create();
 
