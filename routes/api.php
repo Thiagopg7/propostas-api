@@ -15,7 +15,7 @@ Route::prefix('v1')->group(function () {
         ->parameters(['clientes' => 'client']);
 
     Route::apiResource('propostas', ProposalController::class)
-        ->only(['index', 'store', 'show'])
+        ->only(['index', 'store', 'show', 'update'])
         ->parameters(['propostas' => 'proposal'])
         ->middlewareFor('store', 'idempotency');
 });

@@ -196,3 +196,118 @@ test('retorna 404 para proposta excluída logicamente', function () {
     $this->getJson("/api/v1/propostas/{$proposal->id}")
         ->assertNotFound();
 });
+
+test('atualiza campos de uma proposta em rascunho e incrementa a versão', function () {
+    $proposal = Proposal::factory()->create(['product' => 'Antigo', 'version' => 1]);
+
+    $this->patchJson("/api/v1/propostas/{$proposal->id}", [
+        'version' => 1,
+        'product' => 'Novo Plano',
+        'monthly_value' => 350.00,
+    ])
+        ->assertOk()
+        ->assertJsonPath('data.product', 'Novo Plano')
+        ->assertJsonPath('data.version', 2);
+
+    $this->assertDatabaseHas('proposals', [
+        'id' => $proposal->id,
+        'product' => 'Novo Plano',
+        'version' => 2,
+    ]);
+});
+
+test('rejeita atualização com versão desatualizada', function () {
+    $proposal = Proposal::factory()->create(['product' => 'Original', 'version' => 3]);
+
+    $this->patchJson("/api/v1/propostas/{$proposal->id}", [
+        'version' => 2,
+        'product' => 'Tentativa',
+    ])->assertStatus(409);
+
+    $this->assertDatabaseHas('proposals', [
+        'id' => $proposal->id,
+        'product' => 'Original',
+        'version' => 3,
+    ]);
+});
+
+test('exige a versão para atualizar', function () {
+    $proposal = Proposal::factory()->create();
+
+    $this->patchJson("/api/v1/propostas/{$proposal->id}", [
+        'product' => 'Sem versão',
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors(['version']);
+});
+
+test('exige ao menos um campo editável na atualização', function () {
+    $proposal = Proposal::factory()->create(['version' => 1]);
+
+    $this->patchJson("/api/v1/propostas/{$proposal->id}", [
+        'version' => 1,
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors(['product', 'monthly_value', 'origin']);
+});
+
+test('rejeita valor mensal inválido na atualização', function () {
+    $proposal = Proposal::factory()->create(['version' => 1]);
+
+    $this->patchJson("/api/v1/propostas/{$proposal->id}", [
+        'version' => 1,
+        'monthly_value' => 0,
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors(['monthly_value']);
+});
+
+test('não permite editar proposta fora do rascunho', function () {
+    $proposal = Proposal::factory()->submitted()->create(['version' => 1]);
+
+    $this->patchJson("/api/v1/propostas/{$proposal->id}", [
+        'version' => 1,
+        'product' => 'Não pode',
+    ])->assertUnprocessable();
+
+    $this->assertDatabaseHas('proposals', [
+        'id' => $proposal->id,
+        'status' => 'SUBMITTED',
+        'version' => 1,
+    ]);
+});
+
+test('ignora status e client_id enviados no corpo ao atualizar', function () {
+    $client = Client::factory()->create();
+    $proposal = Proposal::factory()->create(['client_id' => $client->id, 'version' => 1]);
+    $otherClient = Client::factory()->create();
+
+    $this->patchJson("/api/v1/propostas/{$proposal->id}", [
+        'version' => 1,
+        'product' => 'Atualizado',
+        'status' => 'APPROVED',
+        'client_id' => $otherClient->id,
+    ])
+        ->assertOk()
+        ->assertJsonPath('data.status', 'DRAFT');
+
+    $this->assertDatabaseHas('proposals', [
+        'id' => $proposal->id,
+        'status' => 'DRAFT',
+        'client_id' => $client->id,
+    ]);
+});
+
+test('retorna 404 ao atualizar proposta inexistente', function () {
+    $this->patchJson('/api/v1/propostas/999999', [
+        'version' => 1,
+        'product' => 'X',
+    ])->assertNotFound();
+});
+
+test('retorna 404 ao atualizar proposta excluída logicamente', function () {
+    $proposal = Proposal::factory()->create();
+    $proposal->delete();
+
+    $this->patchJson("/api/v1/propostas/{$proposal->id}", [
+        'version' => 1,
+        'product' => 'X',
+    ])->assertNotFound();
+});
