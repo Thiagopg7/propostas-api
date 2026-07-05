@@ -2,16 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\ProposalStatus;
 use App\Http\Requests\StoreProposalRequest;
 use App\Http\Requests\UpdateProposalRequest;
 use App\Http\Resources\ProposalResource;
 use App\Models\Proposal;
+use App\Services\ProposalService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\Response;
 
 class ProposalController extends Controller
@@ -20,21 +19,18 @@ class ProposalController extends Controller
 
     private const MAX_PER_PAGE = 100;
 
+    public function __construct(private readonly ProposalService $proposals) {}
+
     public function index(Request $request): AnonymousResourceCollection
     {
         $perPage = max(1, min($request->integer('per_page', self::DEFAULT_PER_PAGE), self::MAX_PER_PAGE));
 
-        $proposals = Proposal::query()
-            ->latest('id')
-            ->paginate($perPage)
-            ->withQueryString();
-
-        return ProposalResource::collection($proposals);
+        return ProposalResource::collection($this->proposals->paginate($perPage));
     }
 
     public function store(StoreProposalRequest $request): JsonResponse
     {
-        $proposal = Proposal::create($request->validated());
+        $proposal = $this->proposals->create($request->validated());
 
         return ProposalResource::make($proposal)
             ->response()
@@ -46,48 +42,36 @@ class ProposalController extends Controller
         return ProposalResource::make($proposal);
     }
 
-    public function update(UpdateProposalRequest $request, Proposal $proposal): JsonResponse|ProposalResource
+    public function update(UpdateProposalRequest $request, Proposal $proposal): ProposalResource
     {
-        if ($proposal->status !== ProposalStatus::Draft) {
-            return $this->notEditable();
-        }
-
         $validated = $request->validated();
-        $expectedVersion = (int) $validated['version'];
-        $fields = Arr::except($validated, ['version']);
 
-        $affected = Proposal::query()
-            ->whereKey($proposal->getKey())
-            ->where('version', $expectedVersion)
-            ->where('status', ProposalStatus::Draft->value)
-            ->update([
-                ...$fields,
-                'version' => DB::raw('version + 1'),
-                'updated_at' => now(),
-            ]);
+        $proposal = $this->proposals->update(
+            $proposal,
+            Arr::except($validated, ['version']),
+            (int) $validated['version'],
+        );
 
-        if ($affected === 0) {
-            $proposal->refresh();
-
-            return $proposal->status === ProposalStatus::Draft
-                ? $this->versionConflict()
-                : $this->notEditable();
-        }
-
-        return ProposalResource::make($proposal->refresh());
+        return ProposalResource::make($proposal);
     }
 
-    private function notEditable(): JsonResponse
+    public function submit(Proposal $proposal): ProposalResource
     {
-        return new JsonResponse([
-            'message' => 'Apenas propostas em rascunho podem ser editadas.',
-        ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        return ProposalResource::make($this->proposals->submit($proposal));
     }
 
-    private function versionConflict(): JsonResponse
+    public function approve(Proposal $proposal): ProposalResource
     {
-        return new JsonResponse([
-            'message' => 'A proposta foi modificada por outra requisição. Recarregue e tente novamente.',
-        ], Response::HTTP_CONFLICT);
+        return ProposalResource::make($this->proposals->approve($proposal));
+    }
+
+    public function reject(Proposal $proposal): ProposalResource
+    {
+        return ProposalResource::make($this->proposals->reject($proposal));
+    }
+
+    public function cancel(Proposal $proposal): ProposalResource
+    {
+        return ProposalResource::make($this->proposals->cancel($proposal));
     }
 }

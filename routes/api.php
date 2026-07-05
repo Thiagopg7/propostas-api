@@ -14,6 +14,16 @@ Route::prefix('v1')->group(function () {
         ->only(['store', 'show'])
         ->parameters(['clientes' => 'client']);
 
+    Route::post('propostas/{proposal}/submit', [ProposalController::class, 'submit'])
+        ->middleware('idempotency')
+        ->name('propostas.submit');
+    Route::post('propostas/{proposal}/approve', [ProposalController::class, 'approve'])
+        ->name('propostas.approve');
+    Route::post('propostas/{proposal}/reject', [ProposalController::class, 'reject'])
+        ->name('propostas.reject');
+    Route::post('propostas/{proposal}/cancel', [ProposalController::class, 'cancel'])
+        ->name('propostas.cancel');
+
     Route::apiResource('propostas', ProposalController::class)
         ->only(['index', 'store', 'show', 'update'])
         ->parameters(['propostas' => 'proposal'])
