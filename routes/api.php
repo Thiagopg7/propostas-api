@@ -25,7 +25,7 @@ Route::prefix('v1')->group(function () {
         ->name('propostas.cancel');
 
     Route::apiResource('propostas', ProposalController::class)
-        ->only(['index', 'store', 'show', 'update'])
+        ->only(['index', 'store', 'show', 'update', 'destroy'])
         ->parameters(['propostas' => 'proposal'])
         ->middlewareFor('store', 'idempotency');
 });

@@ -96,6 +96,17 @@ class ProposalService
         return $this->transition($proposal, ProposalStatus::Canceled);
     }
 
+    public function delete(Proposal $proposal): void
+    {
+        DB::transaction(function () use ($proposal) {
+            $proposal->delete();
+
+            $this->audit->record($proposal, ProposalAuditEvent::DeletedLogical, [
+                'status' => $proposal->status->value,
+            ]);
+        });
+    }
+
     private function transition(Proposal $proposal, ProposalStatus $target): Proposal
     {
         if (! $proposal->status->canTransitionTo($target)) {

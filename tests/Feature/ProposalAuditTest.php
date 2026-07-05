@@ -104,3 +104,50 @@ test('não registra auditoria quando a atualização falha por conflito de vers�
 
     expect($proposal->audits()->where('event', 'UPDATED_FIELDS')->count())->toBe(0);
 });
+
+test('exclui logicamente uma proposta e registra auditoria DELETED_LOGICAL', function () {
+    $proposal = Proposal::factory()->create();
+
+    $this->deleteJson("/api/v1/propostas/{$proposal->id}")
+        ->assertNoContent();
+
+    $this->assertSoftDeleted('proposals', ['id' => $proposal->id]);
+
+    $this->assertDatabaseHas('proposal_audits', [
+        'proposal_id' => $proposal->id,
+        'event' => 'DELETED_LOGICAL',
+        'actor' => 'system',
+    ]);
+});
+
+test('registra o actor da exclusão a partir do header X-Actor', function () {
+    $proposal = Proposal::factory()->create();
+
+    $this->deleteJson("/api/v1/propostas/{$proposal->id}", [], ['X-Actor' => 'user:7'])
+        ->assertNoContent();
+
+    $this->assertDatabaseHas('proposal_audits', [
+        'proposal_id' => $proposal->id,
+        'event' => 'DELETED_LOGICAL',
+        'actor' => 'user:7',
+    ]);
+});
+
+test('não consulta proposta após exclusão lógica', function () {
+    $proposal = Proposal::factory()->create();
+
+    $this->deleteJson("/api/v1/propostas/{$proposal->id}")->assertNoContent();
+
+    $this->getJson("/api/v1/propostas/{$proposal->id}")->assertNotFound();
+});
+
+test('retorna 404 ao excluir proposta inexistente', function () {
+    $this->deleteJson('/api/v1/propostas/999999')->assertNotFound();
+});
+
+test('retorna 404 ao excluir proposta já excluída logicamente', function () {
+    $proposal = Proposal::factory()->create();
+    $proposal->delete();
+
+    $this->deleteJson("/api/v1/propostas/{$proposal->id}")->assertNotFound();
+});
