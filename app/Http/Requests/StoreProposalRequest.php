@@ -47,7 +47,7 @@ class StoreProposalRequest extends FormRequest
             'product.max' => 'O campo :attribute não pode ter mais de :max caracteres.',
             'monthly_value.max' => 'O campo :attribute não pode ser maior que :max.',
             'exists' => 'O :attribute informado não existe.',
-            'enum' => 'O :attribute selecionado é inválido.',
+            'origin.enum' => 'O :attribute selecionado é inválido.',
         ];
     }
 

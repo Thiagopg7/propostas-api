@@ -68,7 +68,7 @@ test('rejeita cliente inexistente', function () {
 test('rejeita origem inválida', function () {
     $this->postJson('/api/v1/propostas', validProposalPayload(['origin' => 'EMAIL']), idempotencyHeader())
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['origin']);
+        ->assertJsonValidationErrors(['origin' => 'O origem selecionado é inválido.']);
 });
 
 test('rejeita valor mensal não positivo', function () {
@@ -257,6 +257,16 @@ test('rejeita valor mensal inválido na atualização', function () {
         'monthly_value' => 0,
     ])->assertUnprocessable()
         ->assertJsonValidationErrors(['monthly_value']);
+});
+
+test('rejeita origem inválida na atualização', function () {
+    $proposal = Proposal::factory()->create(['version' => 1]);
+
+    $this->patchJson("/api/v1/propostas/{$proposal->id}", [
+        'version' => 1,
+        'origin' => 'EMAIL',
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors(['origin' => 'O origem selecionado é inválido.']);
 });
 
 test('não permite editar proposta fora do rascunho', function () {

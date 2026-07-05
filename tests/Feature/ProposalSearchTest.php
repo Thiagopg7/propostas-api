@@ -106,7 +106,13 @@ test('rejeita direção de ordenação inválida', function () {
 test('rejeita status inválido no filtro', function () {
     $this->getJson('/api/v1/propostas?status=INVALIDO')
         ->assertUnprocessable()
-        ->assertJsonValidationErrors(['status']);
+        ->assertJsonValidationErrors(['status' => 'O status selecionado é inválido.']);
+});
+
+test('rejeita origem inválida no filtro', function () {
+    $this->getJson('/api/v1/propostas?origin=INVALIDO')
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['origin' => 'O origem selecionado é inválido.']);
 });
 
 test('aplica filtros com ordenação e paginação em conjunto', function () {

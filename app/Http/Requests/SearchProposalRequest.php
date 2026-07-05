@@ -51,7 +51,8 @@ class SearchProposalRequest extends FormRequest
             'gte' => 'O campo :attribute deve ser maior ou igual a :value.',
             'max' => 'O campo :attribute deve ter no máximo :max caracteres.',
             'exists' => 'O :attribute informado não existe.',
-            'enum' => 'O :attribute selecionado é inválido.',
+            'status.enum' => 'O :attribute selecionado é inválido.',
+            'origin.enum' => 'O :attribute selecionado é inválido.',
             'sort.in' => 'O campo :attribute deve ser uma das colunas permitidas.',
             'order.in' => 'O campo :attribute deve ser asc ou desc.',
         ];
